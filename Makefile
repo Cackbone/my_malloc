@@ -8,14 +8,20 @@ ifeq (/bin/zsh, $(wildcard /bin/zsh))
 SHELL		:=	/bin/zsh
 endif
 
-CC			=	gcc
-NAME		=	malloc
-CFLAGS		=	-W -Werror -Wextra -Wall
-CINCS		=	-Iinclude
-LIBS		=
+CC		=	gcc
+NAME		=	mymalloc
+LIBNAME	=	libmy_malloc.so
+CFLAGS		=	-W -Werror -Wextra -Wall -fPIC
+CINCS		=
+LIBS		=	-ldl
 NB_THREAD	=	-DNB_THREAD=$(shell nproc)
 
-FILES		=	main
+NONLIB_FILES	=	main
+
+FILES		=	malloc
+
+TEST_FILES	=	$(NONLIB_FILES) \
+				$(FILES)
 
 ifeq ($(MAKECMDGOALS),leaks)
 CFLAGS		+=	-g3
@@ -23,9 +29,15 @@ else
 CFLAGS		+=	-g0
 endif
 
-SRC		=	$(addsuffix .c, $(FILES))
+# Compilation for test
+SRC		=	$(addsuffix .c, $(TEST_FILES))
 SRC_PATH	=	$(addprefix src/, $(SRC))
 OBJ		=	$(SRC_PATH:src/%.c=obj/%.o)
+
+# Compilation for lib
+SRC_LIB		=	$(addsuffix .c, $(FILES))
+SRC_PATH_LIB	=	$(addprefix src/, $(SRC_LIB))
+OBJ_LIB		=	$(SRC_PATH_LIB:src/%.c=obj/%.o)
 
 T_RESET	=	\033[0m
 T_TITLE	=	$(T_RESET)\033[1;32m✔ \033[1;36m
@@ -42,18 +54,19 @@ MSG_OK		=	[\033[1;32mOK$(T_RESET)]
 
 all: $(NAME)
 
+lib: fclean dirobj $(OBJ_LIB)
+	@$(CC) -shared -o $(LIBNAME) $(OBJ_LIB) $(LIBS)
+
 $(NAME): $(OBJ)
 	@echo -e "\n$(T_COMPILE) Compiling binary:$(T_FILE)\t$(shell pwd)/$(NAME)$(T_RESET)\n\n"
 	@$(CC) $(NB_THREAD) $(OBJ) -o $(NAME) $(LIBXML) $(LIBS)
-	@echo -e "\n$(T_TITLE) $(NAME)\t\t$(T_FILE)Created$(T_RESET)\n\n$(T_RESET)"
+	@echo -e "\n$(T_TITLE) $(NAME)\t\t$(T_FILE)Created$(T_RESET)\n\n"
 	@echo -e "\n$(T_LAUNCH) \tYou can launch $(T_FILE)$(NAME)\033[1;36m now !\n\n$(T_RESET)"
 
 obj/%.o : src/%.c
 	@-$(CC) $(CFLAGS) $(CINCS) -o $@ -c $^
 	@([ -f $@ ] && echo -e "$(MSG_OK)\t\e[1m$^$(T_RESET)  ❱❱  \033[1;32m$@$(T_RESET)") || \
 	echo -e "\n$(MSG_KO)\t\e[1m$^$(T_RESET)  ❱❱  \e[41m\e[1m\e[97m\e[5m ⚠ $@ ⚠ $(T_RESET)"
-
-
 
 clean:
 	@echo -e "$(T_DELETE) Delete:$(T_FILE)\t\t$(shell pwd)/obj$(T_RESET)\n"
@@ -70,15 +83,12 @@ fclean: clean oclean
 
 re: fclean dirobj all
 
-run: dirobj all
-	@clear
-	@./$(NAME)
-
 dirobj:
 	@echo -e "$(T_TITLE) Create:$(T_FILE)\t\t$(shell pwd)/obj$(T_RESET)\n"
 	@mkdir -p obj
 	@find src -type d -exec mkdir -p "obj/{}" \;
 	@-mv obj/src/* obj/
+	@rm -rf obj/src
 
 leaks: re
 	valgrind --tool=memcheck --leak-check=yes --track-origins=yes --leak-check=full --show-leak-kinds=all ./$(NAME)
