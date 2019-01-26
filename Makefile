@@ -12,16 +12,13 @@ CC		=	gcc
 NAME		=	mymalloc
 LIBNAME	=	libmy_malloc.so
 CFLAGS		=	-W -Werror -Wextra -Wall -fPIC
-CINCS		=
+CINCS		=	-Iinclude
 LIBS		=	-ldl
 NB_THREAD	=	-DNB_THREAD=$(shell nproc)
 
 NONLIB_FILES	=	main
 
 FILES		=	malloc
-
-TEST_FILES	=	$(NONLIB_FILES) \
-				$(FILES)
 
 ifeq ($(MAKECMDGOALS),leaks)
 CFLAGS		+=	-g3
@@ -30,7 +27,7 @@ CFLAGS		+=	-g0
 endif
 
 # Compilation for test
-SRC		=	$(addsuffix .c, $(TEST_FILES))
+SRC		=	$(addsuffix .c, $(NONLIB_FILES))
 SRC_PATH	=	$(addprefix src/, $(SRC))
 OBJ		=	$(SRC_PATH:src/%.c=obj/%.o)
 
@@ -54,14 +51,18 @@ MSG_OK		=	[\033[1;32mOK$(T_RESET)]
 
 all: $(NAME)
 
-lib: fclean dirobj $(OBJ_LIB)
-	@$(CC) -shared -o $(LIBNAME) $(OBJ_LIB) $(LIBS)
-
-$(NAME): $(OBJ)
+run: re $(OBJ)
 	@echo -e "\n$(T_COMPILE) Compiling binary:$(T_FILE)\t$(shell pwd)/$(NAME)$(T_RESET)\n\n"
-	@$(CC) $(NB_THREAD) $(OBJ) -o $(NAME) $(LIBXML) $(LIBS)
+	@$(CC) $(NB_THREAD) $(OBJ) -o $(NAME) $(LIBS)
 	@echo -e "\n$(T_TITLE) $(NAME)\t\t$(T_FILE)Created$(T_RESET)\n\n"
 	@echo -e "\n$(T_LAUNCH) \tYou can launch $(T_FILE)$(NAME)\033[1;36m now !\n\n$(T_RESET)"
+	@env LD_PRELOAD=$(LIBNAME) ./$(NAME)
+
+$(NAME): $(OBJ_LIB)
+	@echo -e "\n$(T_COMPILE) Compiling library:$(T_FILE)\t$(shell pwd)/$(NAME)$(T_RESET)\n\n"
+	@$(CC) $(NB_THREAD) -shared -o $(LIBNAME) $(OBJ_LIB) $(LIBS)
+	@echo -e "\n$(T_TITLE) $(NAME)\t\t$(T_FILE)Created$(T_RESET)\n\n"
+	@echo -e "\n$(T_LAUNCH) \tYou can use libreary $(T_FILE)$(LIBNAME)\033[1;36m now !\n\n$(T_RESET)"
 
 obj/%.o : src/%.c
 	@-$(CC) $(CFLAGS) $(CINCS) -o $@ -c $^
