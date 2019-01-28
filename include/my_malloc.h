@@ -21,5 +21,6 @@ typedef struct mem_block_s
 } mem_block_t;
 
 void *malloc(size_t);
+void free(void *);
 
 #endif

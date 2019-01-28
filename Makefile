@@ -56,7 +56,7 @@ run: re $(OBJ)
 	@$(CC) $(NB_THREAD) $(OBJ) -o $(NAME) $(LIBS)
 	@echo -e "\n$(T_TITLE) $(NAME)\t\t$(T_FILE)Created$(T_RESET)\n\n"
 	@echo -e "\n$(T_LAUNCH) \tYou can launch $(T_FILE)$(NAME)\033[1;36m now !\n\n$(T_RESET)"
-	@env LD_PRELOAD=$(LIBNAME) ./$(NAME)
+	@env LD_PRELOAD=./$(LIBNAME) ./reverse_me_to_improve_your_malloc
 
 $(NAME): $(OBJ_LIB)
 	@echo -e "\n$(T_COMPILE) Compiling library:$(T_FILE)\t$(shell pwd)/$(NAME)$(T_RESET)\n\n"
