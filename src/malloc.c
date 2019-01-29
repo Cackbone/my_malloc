@@ -24,19 +24,40 @@ void print_nbr(size_t nb)
     }
 }
 
+void putstr_err(char *str)
+{
+    write(2, str, strlen(str));
+}
+
+void print_nbr_err(size_t nb)
+{
+    char c = 0;
+    
+    if (nb > 9) {
+	print_nbr(nb / 10);
+	print_nbr(nb % 10);
+    } else {
+	c = nb + 48;
+	write(2, &c, 1);
+    }
+}
 
 static void show_alloc_mem()
 {
     void *it = START_MEM_PTR;
     void *top = sbrk(0);
     mem_block_t *header = NULL;
+    char stop = 0;
     
     putstr("break : ");
     print_nbr((size_t)START_MEM_PTR);
     putstr("\n");
+    putstr("end : ");
+    print_nbr((size_t)top);
+    putstr("\n");
     while (it < top) {
 	header = it;
-        print_nbr((size_t)(it + sizeof(mem_block_t)));
+        print_nbr((size_t)(it));
 	write(1, " -- ", 4);
         print_nbr((size_t)(it + sizeof(mem_block_t) + header->size));
 	write(1, " -- ", 4);
@@ -44,6 +65,10 @@ static void show_alloc_mem()
 	write(1, " -- ", 4);
 	print_nbr(header->free);
 	write(1, "\n", 1);
+	if (stop)
+	    exit(1);
+	/* if (header->size == 0) */
+	/*     stop = 1; */
 	it += sizeof(mem_block_t) + header->size;
     }
 }
@@ -67,17 +92,17 @@ static void *get_free_space(size_t size)
 
     while (it < top) {
         header = it;
-	putstr("size: ");
-	print_nbr(header->size);
-	putstr("\tit: ");
-	print_nbr((size_t)it);
-	putstr("\n");
+	/* putstr("size: "); */
+	/* print_nbr(header->size); */
+	/* putstr("\tit: "); */
+	/* print_nbr((size_t)it); */
+	/* putstr("\n"); */
         if (header->free && header->size >= size)
             return it;
 	if (header->size == 0) {
-	    putstr("\n\n\n\n");
+	    //putstr("\n\n\n\n");
 	    show_alloc_mem();
-	    exit(1);
+	    //exit(1);
 	}
         it += sizeof(mem_block_t) + header->size;
     }
@@ -91,6 +116,9 @@ void split_free_space(void *ptr, int size)
     size_t remaining_space = header->size - size;
     mem_block_t new_block = {remaining_space - sizeof(mem_block_t), 1};
 
+    putstr("Remaining space: ");
+    print_nbr(remaining_space);
+    putstr("\n");
     if (remaining_space <= sizeof(mem_block_t))
         return;
     putstr("[split] Create new block of size ");
@@ -102,6 +130,9 @@ void split_free_space(void *ptr, int size)
     print_nbr(size);
     putstr("\n");
     free_space = (ptr + sizeof(mem_block_t) + size);
+    putstr("[Create block]: ");
+    print_nbr((size_t)((mem_block_t *)free_space));
+    putstr("\n");
     *((mem_block_t *)free_space) = new_block;
 }
 
@@ -110,27 +141,34 @@ void *malloc(size_t size)
     void *free = NULL;
     mem_block_t block;
     void *ptr = NULL;
+    size_t pagesize = getpagesize();
 
     if (size == 0)
 	return NULL;
-
+    putstr("malloc(");
+    print_nbr(size);
+    putstr(");\n");
     if (!START_MEM_PTR)
         START_MEM_PTR = sbrk(0);
     free = get_free_space(ALIGN(size));
     if (!free) {
 	putstr("No space available\n");
-        block.size = ((size / getpagesize()) + 1) * getpagesize();
+	if (size % pagesize == 0)
+	    block.size = ((size / pagesize)) * pagesize;
+	else
+	    block.size = ((size / pagesize) + 1) * pagesize;
         block.free = 1;
         ptr = sbrk(sizeof(mem_block_t) + block.size);
 	if (ptr == (void *)-1)
 	    return NULL;
         *((mem_block_t *)ptr) = block;
+	putstr("[Create block]: ");
+	print_nbr((size_t)((mem_block_t *)ptr));
+	putstr("\n");
 	return (malloc(size));
     } else {
         split_free_space(free, ALIGN(size));
-	block.size = ALIGN(size);
-        block.free = 0;
-        *((mem_block_t *)free) = block;
+	((mem_block_t *)free)->free = 0;
 	putstr("[malloc] Create new block of size ");
 	print_nbr(ALIGN(size));
 	putstr("\n");
