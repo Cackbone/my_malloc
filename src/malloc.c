@@ -126,48 +126,37 @@ void *malloc(size_t size)
     mem_block_t block;
     void *ptr = NULL;
     size_t pagesize = getpagesize();
-    void *addr = NULL;
 
-    /* putstr("malloc("); */
-    /* print_nbr(size); */
-    /* putstr(");\n"); */
     if (size == 0)
 	return NULL;
     if (!START_MEM_PTR)
         START_MEM_PTR = sbrk(0);
     free = get_free_space(ALIGN(size));
-    if (free == 0) {
-	if (size % pagesize == 0)
-	    block.size = ((size / pagesize)) * pagesize;
+    if (free == NULL) {
+	if (size % (pagesize - sizeof(mem_block_t)) == 0)
+	    block.size = (size / (pagesize - sizeof(mem_block_t))) * pagesize;
 	else
-	    block.size = ((size / pagesize) + 1) * pagesize;
+	    block.size = ((size / (pagesize - sizeof(mem_block_t))) + 1) * pagesize;
         block.free = 1;
-	/* putstr("Create block of size: "); */
-	/* print_nbr(block.size); */
-	/* putstr("\n"); */
-        ptr = sbrk(sizeof(mem_block_t) + block.size);
+	print_nbr(block.size);
+	putstr("\n");
+        ptr = sbrk(block.size);
 	if (ptr == (void *)-1)
 	    return NULL;
         *((mem_block_t *)ptr) = block;
-	addr = malloc(size);
+	show_alloc_mem();
+        return malloc(size);
     } else {
         split_free_space(free, ALIGN(size));
 	((mem_block_t *)free)->free = 0;
-        addr = free + sizeof(mem_block_t);
+        return free + sizeof(mem_block_t);
     }
-    /* putstr("addr: "); */
-    /* print_nbr((size_t)addr); */
-    /* putstr("\n"); */
-    return addr;
 }
 
 void free(void *ptr)
 {
-    /* putstr("free("); */
-    /* print_nbr((size_t)ptr); */
-    /* putstr(");\n"); */
     if (!ptr) {
-	//show_alloc_mem();
+	show_alloc_mem();
 	return;
     }
     mem_block_t *block = ptr - sizeof(mem_block_t);
@@ -190,9 +179,9 @@ void *realloc(void *ptr, size_t size)
 
     if (!ptr)
 	return malloc(size);
-    
-    if (block->size < size) {
-	split_free_space(ptr, size);
+
+    if (block->size > size) {
+	split_free_space(ptr  - sizeof(mem_block_t), size);
 	return ptr;
     } else {
 	p2 = malloc(size);
