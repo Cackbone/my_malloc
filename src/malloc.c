@@ -55,6 +55,9 @@ void show_alloc_mem()
     putstr("end : ");
     print_nbr((size_t)top);
     putstr("\n");
+    putstr("diff : ");
+    print_nbr((size_t)top - (size_t)START_MEM_PTR);
+    putstr("\n");
     while (it < top) {
 	header = it;
         print_nbr((size_t)(it));
@@ -67,8 +70,12 @@ void show_alloc_mem()
 	write(1, "\n", 1);
 	if (stop)
 	    exit(1);
-	if (header->size == 0)
+	if (header->size == 0) {
+	    putstr("\e[0;31mHeader free: ");
+	    print_nbr((size_t)&(header->free));
+	    putstr("\e[0m\n");
 	    stop = 1;
+	}
 	it += sizeof(mem_block_t) + header->size;
     }
 }
@@ -119,7 +126,11 @@ void *malloc(size_t size)
     mem_block_t block;
     void *ptr = NULL;
     size_t pagesize = getpagesize();
+    void *addr = NULL;
 
+    /* putstr("malloc("); */
+    /* print_nbr(size); */
+    /* putstr(");\n"); */
     if (size == 0)
 	return NULL;
     if (!START_MEM_PTR)
@@ -131,28 +142,62 @@ void *malloc(size_t size)
 	else
 	    block.size = ((size / pagesize) + 1) * pagesize;
         block.free = 1;
-	putstr("Create block of size: ");
-	print_nbr(block.size);
-	putstr("\n");
+	/* putstr("Create block of size: "); */
+	/* print_nbr(block.size); */
+	/* putstr("\n"); */
         ptr = sbrk(sizeof(mem_block_t) + block.size);
 	if (ptr == (void *)-1)
 	    return NULL;
         *((mem_block_t *)ptr) = block;
-	return (malloc(size));
+	addr = malloc(size);
     } else {
         split_free_space(free, ALIGN(size));
 	((mem_block_t *)free)->free = 0;
-        return (free + sizeof(mem_block_t));
+        addr = free + sizeof(mem_block_t);
     }
+    /* putstr("addr: "); */
+    /* print_nbr((size_t)addr); */
+    /* putstr("\n"); */
+    return addr;
 }
 
 void free(void *ptr)
 {
+    /* putstr("free("); */
+    /* print_nbr((size_t)ptr); */
+    /* putstr(");\n"); */
     if (!ptr) {
-	show_alloc_mem();
+	//show_alloc_mem();
 	return;
     }
     mem_block_t *block = ptr - sizeof(mem_block_t);
 
     block->free = 1;
+}
+
+void *calloc(size_t nmemb, size_t size)
+{
+    void *ptr = malloc(nmemb * size);
+
+    memset(ptr, 0, nmemb * size);
+    return ptr;
+}
+
+void *realloc(void *ptr, size_t size)
+{
+    mem_block_t *block = ptr - sizeof(mem_block_t);
+    void *p2 = NULL;
+
+    if (!ptr)
+	return malloc(size);
+    
+    if (block->size < size) {
+	split_free_space(ptr, size);
+	return ptr;
+    } else {
+	p2 = malloc(size);
+	memcpy(p2, ptr, block->size);
+	free(ptr);
+	return p2;
+    }
 }
