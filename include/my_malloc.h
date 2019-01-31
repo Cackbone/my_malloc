@@ -23,5 +23,7 @@ typedef struct mem_block_s
 
 void *malloc(size_t);
 void free(void *);
+void split_free_space(void *, int);
+void show_alloc_mem(void);
 
 #endif
