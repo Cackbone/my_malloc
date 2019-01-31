@@ -94,9 +94,7 @@ re: fclean dirobj all
 dirobj:
 	@echo -e "$(T_TITLE) Create:$(T_FILE)\t\t$(shell pwd)/obj$(T_RESET)\n"
 	@mkdir -p obj
-	@find src -type d -exec mkdir -p "obj/{}" \;
-	@-mv obj/src/* obj/
-	@rm -rf obj/src
+	@find src -type d -exec mkdir -p "obj/../{}" \;
 
 leaks: re
 	valgrind --tool=memcheck --leak-check=yes --track-origins=yes --leak-check=full --show-leak-kinds=all ./$(NAME)
