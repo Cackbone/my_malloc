@@ -19,9 +19,9 @@ NB_THREAD	=	-DNB_THREAD=$(shell nproc)
 NONLIB_FILES	=	main
 
 FILES		=	malloc \
-			free \
 			calloc \
-			realloc
+			realloc \
+			free
 
 ifeq ($(MAKECMDGOALS),leaks)
 CFLAGS		+=	-g3
@@ -56,14 +56,14 @@ all: $(NAME)
 
 test: re $(OBJ)
 	@echo -e "\n$(T_COMPILE) Compiling binary:$(T_FILE)\t$(shell pwd)/$(NAME)$(T_RESET)\n\n"
-	@$(CC) $(NB_THREAD) $(OBJ) -o $(NAME) $(LIBS) $(CINCS)
+	@$(CC) $(NB_THREAD) $(OBJ) -o $(NAME) $(LIBS)
 	@echo -e "\n$(T_TITLE) $(NAME)\t\t$(T_FILE)Created$(T_RESET)\n\n"
 	@echo -e "\n$(T_LAUNCH) \tYou can launch $(T_FILE)$(NAME)\033[1;36m now !\n\n$(T_RESET)"
 	@env LD_PRELOAD=./$(LIBNAME) ./reverse_me_to_improve_your_malloc
 
 run: re $(OBJ)
 	@echo -e "\n$(T_COMPILE) Compiling binary:$(T_FILE)\t$(shell pwd)/$(NAME)$(T_RESET)\n\n"
-	@$(CC) $(NB_THREAD) $(OBJ) -o $(NAME) $(LIBS) $(CINCS)
+	@$(CC) $(NB_THREAD) $(OBJ) -o $(NAME) $(LIBS)
 	@echo -e "\n$(T_TITLE) $(NAME)\t\t$(T_FILE)Created$(T_RESET)\n\n"
 	@echo -e "\n$(T_LAUNCH) \tYou can launch $(T_FILE)$(NAME)\033[1;36m now !\n\n$(T_RESET)"
 	@env LD_PRELOAD=./$(LIBNAME) ./$(NAME)
@@ -97,7 +97,7 @@ re: fclean dirobj all
 dirobj:
 	@echo -e "$(T_TITLE) Create:$(T_FILE)\t\t$(shell pwd)/obj$(T_RESET)\n"
 	@mkdir -p obj
-	@find src -type d -exec mkdir -p "obj/{}" \;
+	@find src -type d -exec mkdir -p "obj/../{}" \;
 
 leaks: re
 	valgrind --tool=memcheck --leak-check=yes --track-origins=yes --leak-check=full --show-leak-kinds=all ./$(NAME)
