@@ -6,21 +6,6 @@
 
 void *START_MEM_PTR = NULL;
 
-void show_alloc_mem(void)
-{
-    void *it = START_MEM_PTR;
-    void *top = sbrk(0);
-    mem_block_t *header = NULL;
-
-    printf("break : %lX\n", (size_t)top);
-    while (it < top) {
-        header = it;
-        if (!header->free)
-            printf("%lX - %lX : %ld bytes\n", (size_t)(it + sizeof(mem_block_t)), (size_t)(it + sizeof(mem_block_t) + header->size), header->size);
-        it += sizeof(mem_block_t) + header->size;
-    }
-}
-
 static void *get_free_space(size_t size)
 {
     void *it = START_MEM_PTR;
@@ -50,7 +35,16 @@ void split_free_space(void *ptr, int size)
     *((mem_block_t *)free_space) = new_block;
 }
 
-char alloc_space(size_t size)
+void *reuse_space(void *ptr, size_t size)
+{
+    if (!ptr || size == 0)
+	return (NULL);
+    split_free_space(ptr, ALIGN(size));
+    ((mem_block_t *)ptr)->free = 0;
+    return (ptr + sizeof(mem_block_t));
+}
+
+void *alloc_space(size_t size)
 {
     size_t pagesize = getpagesize();
     mem_block_t block;
@@ -64,9 +58,9 @@ char alloc_space(size_t size)
     ptr = sbrk(block.size);
     block.size -= sizeof(mem_block_t);
     if (ptr == (void *)-1)
-        return (0);
+        return (reuse_space(NULL, 0));
     *((mem_block_t *)ptr) = block;
-    return (1);
+    return (reuse_space(ptr, size));
 }
 
 void *malloc(size_t size)
@@ -78,13 +72,8 @@ void *malloc(size_t size)
     if (!START_MEM_PTR)
         START_MEM_PTR = sbrk(0);
     free = get_free_space(ALIGN(size));
-    if (free == NULL) {
-        if (!alloc_space(size))
-            return (NULL);
-        return (malloc(size));
-    } else {
-        split_free_space(free, ALIGN(size));
-        ((mem_block_t *)free)->free = 0;
-        return (free + sizeof(mem_block_t));
-    }
+    if (free == NULL)
+        return (alloc_space(size));
+    else
+	return (reuse_space(free, size));
 }

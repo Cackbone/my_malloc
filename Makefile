@@ -21,7 +21,8 @@ NONLIB_FILES	=	main
 FILES		=	malloc \
 			calloc \
 			realloc \
-			free
+			free \
+			show_alloc_mem
 
 ifeq ($(MAKECMDGOALS),leaks)
 CFLAGS		+=	-g3
