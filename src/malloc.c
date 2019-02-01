@@ -2,14 +2,17 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
+#include <pthread.h>
 #include <my_malloc.h>
 
 void *START_MEM_PTR = NULL;
+size_t PAGE_SIZE = 0;
+pthread_mutex_t MALLOC_MUTEX = PTHREAD_MUTEX_INITIALIZER;
 
 static void *get_free_space(size_t size)
 {
     void *it = START_MEM_PTR;
-    void *top = sbrk(0);
+    void *top = my_sbrk(0);
     mem_block_t *header = NULL;
 
     while (it < top) {
@@ -38,7 +41,7 @@ void split_free_space(void *ptr, int size)
 void *reuse_space(void *ptr, size_t size)
 {
     if (!ptr || size == 0)
-	return (NULL);
+        return (NULL);
     split_free_space(ptr, ALIGN(size));
     ((mem_block_t *)ptr)->free = 0;
     return (ptr + sizeof(mem_block_t));
@@ -46,7 +49,7 @@ void *reuse_space(void *ptr, size_t size)
 
 void *alloc_space(size_t size)
 {
-    size_t pagesize = getpagesize();
+    size_t pagesize = PAGE_SIZE;
     mem_block_t block;
     void *ptr = NULL;
 
@@ -55,7 +58,7 @@ void *alloc_space(size_t size)
     else
         block.size = ((size / (pagesize - sizeof(mem_block_t))) + 1) * pagesize;
     block.free = 1;
-    ptr = sbrk(block.size);
+    ptr = my_sbrk(block.size);
     block.size -= sizeof(mem_block_t);
     if (ptr == (void *)-1)
         return (reuse_space(NULL, 0));
@@ -67,13 +70,21 @@ void *malloc(size_t size)
 {
     void *free = NULL;
 
-    if (size == 0)
+    pthread_mutex_lock(&MALLOC_MUTEX);
+    if (PAGE_SIZE == 0)
+        PAGE_SIZE = getpagesize();
+    if (size == 0) {
+        pthread_mutex_unlock(&MALLOC_MUTEX);
         return (NULL);
+    }
     if (!START_MEM_PTR)
-        START_MEM_PTR = sbrk(0);
+        START_MEM_PTR = my_sbrk(0);
     free = get_free_space(ALIGN(size));
-    if (free == NULL)
+    if (free == NULL) {
+        pthread_mutex_unlock(&MALLOC_MUTEX);
         return (alloc_space(size));
-    else
-	return (reuse_space(free, size));
+    } else {
+        pthread_mutex_unlock(&MALLOC_MUTEX);
+        return (reuse_space(free, size));
+    }
 }

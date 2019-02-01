@@ -22,7 +22,8 @@ FILES		=	malloc \
 			calloc \
 			realloc \
 			free \
-			show_alloc_mem
+			show_alloc_mem \
+			sbrk
 
 ifeq ($(MAKECMDGOALS),leaks)
 CFLAGS		+=	-g3

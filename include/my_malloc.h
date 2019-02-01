@@ -2,6 +2,7 @@
 #define MY_MALLOC_H
 
 #include <stdlib.h>
+#include <unistd.h>
 
 #if defined(__x86_64__)
 #define BLOCK_SIZE 8
@@ -14,6 +15,8 @@
 #define ALIGN(x) ((x + BLOCK_SIZE - 1) & ~(BLOCK_SIZE - 1))
 
 extern void *START_MEM_PTR;
+extern size_t PAGE_SIZE;
+extern pthread_mutex_t MALLOC_MUTEX;
 
 typedef struct mem_block_s
 {
@@ -25,5 +28,7 @@ void *malloc(size_t);
 void free(void *);
 void split_free_space(void *, int);
 void show_alloc_mem(void);
+void *my_sbrk(intptr_t);
+
 
 #endif

@@ -5,7 +5,7 @@
 void show_alloc_mem(void)
 {
     void *it = START_MEM_PTR;
-    void *top = sbrk(0);
+    void *top = my_sbrk(0);
     mem_block_t *header = NULL;
 
     printf("break : %lX\n", (size_t)top);

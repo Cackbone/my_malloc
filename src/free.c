@@ -6,12 +6,13 @@
 */
 
 #include <unistd.h>
+#include <pthread.h>
 #include <my_malloc.h>
 
 mem_block_t *merge_blocks()
 {
     void *it = START_MEM_PTR;
-    void *top = sbrk(0);
+    void *top = my_sbrk(0);
     mem_block_t *block = NULL;
     mem_block_t *next = NULL;
     mem_block_t *last = NULL;
@@ -33,14 +34,17 @@ void free(void *ptr)
 {
     mem_block_t *block = ptr - sizeof(mem_block_t);
     mem_block_t *last = NULL;
-    size_t pagesize = getpagesize();
+    size_t size = 0;
 
     if (!ptr)
         return;
+    pthread_mutex_lock(&MALLOC_MUTEX);
     block->free = 1;
     last = merge_blocks();
-    if (last->free && last->size >= 2 * pagesize) {
-        sbrk(-((last->size / pagesize - 1) * pagesize));
-        last->size -= (last->size / pagesize - 1) * pagesize;
+    if (last->free && last->size >= PAGE_SIZE) {
+        size = ((last->size / PAGE_SIZE) * PAGE_SIZE);
+        my_sbrk(-size);
+        last->size -= size;
     }
+    pthread_mutex_unlock(&MALLOC_MUTEX);
 }
