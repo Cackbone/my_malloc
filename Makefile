@@ -52,7 +52,7 @@ MSG_OK		=	[\033[1;32mOK$(T_RESET)]
 
 .PHONY: all clean
 
-all: $(NAME)
+all: dirobj $(NAME)
 
 test: re $(OBJ)
 	@echo -e "\n$(T_COMPILE) Compiling binary:$(T_FILE)\t$(shell pwd)/$(NAME)$(T_RESET)\n\n"
@@ -92,7 +92,7 @@ fclean: clean oclean
 	@find -name "*~" -delete
 	@rm -f $(NAME)
 
-re: fclean dirobj all
+re: fclean all
 
 dirobj:
 	@echo -e "$(T_TITLE) Create:$(T_FILE)\t\t$(shell pwd)/obj$(T_RESET)\n"
