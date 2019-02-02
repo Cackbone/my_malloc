@@ -11,8 +11,11 @@ void show_alloc_mem(void)
     printf("break : %lX\n", (size_t)top);
     while (it < top) {
         header = it;
-        if (!header->free)
-            printf("%lX - %lX : %ld bytes\n", (size_t)(it + sizeof(mem_block_t)), (size_t)(it + sizeof(mem_block_t) + header->size), header->size);
+        if (!header->free) {
+            printf("%lX", (size_t)(it + sizeof(mem_block_t)));
+            printf(" - %lX", (size_t)(it + sizeof(mem_block_t) + header->size));
+            printf(" : %ld bytes\n", header->size);
+        }
         it += sizeof(mem_block_t) + header->size;
     }
 }

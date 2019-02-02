@@ -69,6 +69,7 @@ void *alloc_space(size_t size)
 void *malloc(size_t size)
 {
     void *free = NULL;
+    void *ret = NULL;
 
     pthread_mutex_lock(&MALLOC_MUTEX);
     if (PAGE_SIZE == 0)
@@ -80,11 +81,10 @@ void *malloc(size_t size)
     if (!START_MEM_PTR)
         START_MEM_PTR = my_sbrk(0);
     free = get_free_space(ALIGN(size));
-    if (free == NULL) {
-        pthread_mutex_unlock(&MALLOC_MUTEX);
-        return (alloc_space(size));
-    } else {
-        pthread_mutex_unlock(&MALLOC_MUTEX);
-        return (reuse_space(free, size));
-    }
+    if (free == NULL)
+	ret = alloc_space(size);
+    else
+	ret = reuse_space(free, size);
+    pthread_mutex_unlock(&MALLOC_MUTEX);
+    return (ret);
 }
